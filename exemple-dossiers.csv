@@ -1,0 +1,6 @@
+Référence,Nom,E-mail,Catégorie,Événement,Statut
+GN-DEMO-001,Participant Exemple,participant@exemple.test,VIP,Forum de démonstration — Conakry,Approuvée
+GN-DEMO-002,Participant Exemple,participant@exemple.test,Délégué,Conférence de démonstration — Institutions,En attente
+GN-DEMO-003,Intervenante Exemple,intervenante@exemple.test,Intervenant,Forum de démonstration — Conakry,En attente
+GN-DEMO-004,Journaliste Exemple,presse@exemple.test,Presse,Forum de démonstration — Conakry,Refusée
+GN-DEMO-005,Invité Exemple,invite@exemple.test,VIP,Conférence de démonstration — Institutions,Révoquée
