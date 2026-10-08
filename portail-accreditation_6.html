@@ -958,10 +958,8 @@ body.public-neo .auth-tabs{background:rgba(255,255,255,.05)} body.public-neo .au
 .scene.has3d .badge3d{display:none}
 .scene.has3d .hint{z-index:5}
 </style>
-<style>@media print{.consultation-notice{display:none!important}}</style>
 </head>
 <body>
-<div class="consultation-notice" role="note" style="position:relative;z-index:51;background:#fff3c4;color:#392e0c;padding:10px 24px;font:14px/1.5 system-ui,sans-serif;text-align:center">Version de démonstration · Les opérations et données de cette maquette ne constituent pas des accréditations réelles. <a href="./consultation-corrigee.html" style="color:#145c3b;font-weight:600">Consulter aussi l’interface corrigée</a> · <a href="./portail-accreditation_6.html" download style="color:#145c3b">Télécharger le fichier source</a></div>
 <a class="skip-link" href="#main-content">Aller au contenu principal</a>
 <div class="topstrip" aria-hidden="true"></div>
 
@@ -7712,10 +7710,49 @@ var qrcode = function() {
 </script>
 
 <script id="app-api">
-// Cette publication est une maquette de consultation sans serveur de dossiers.
-if(window.PNA){PNA.backend=false;PNA.sync=function(){return Promise.resolve(false);};}
-var consultationLabel=document.getElementById("backend-label");
-if(consultationLabel)consultationLabel.textContent="Démonstration locale";
+/* ============================================================
+   ÉTAPE 4 — BACKEND (synchronisation offline-first)
+   Si le serveur Node tourne : la base est partagée entre
+   appareils. Sinon : repli automatique sur localStorage.
+   Lancer le backend :  node portail-backend/server.js
+   ============================================================ */
+(function(){
+  if(!window.PNA) return;
+  var DB=PNA.DB;
+  var isHttp=(location.protocol==='http:'||location.protocol==='https:');
+  var API=(isHttp?'':'http://localhost:3000')+'/api';
+
+  function setBadge(on){
+    var b=document.getElementById('backend-badge'), l=document.getElementById('backend-label');
+    if(b) b.classList.toggle('on',!!on);
+    if(l) l.textContent=on?'Backend connecté':'Hors ligne (local)';
+    PNA.backend=!!on;
+  }
+  function rerenderCurrent(){ var cur=document.querySelector('.screen.show'); if(cur) window.show(cur.id); }
+
+  /* PULL initial : récupérer l'état serveur s'il est joignable */
+  function pull(){
+    return fetch(API+'/demandes',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(d && Array.isArray(d.demandes)){
+        DB.s.demandes=d.demandes; if(typeof d.seq==='number') DB.s.seq=d.seq; DB.save();
+        setBadge(true); rerenderCurrent(); return true;
+      }
+      setBadge(false); return false;
+    }).catch(function(){ setBadge(false); return false; });
+  }
+
+  /* PUSH : intercepter les écritures locales pour les répliquer */
+  var _add=DB.add.bind(DB);
+  DB.add=function(d){ var r=_add(d);
+    if(PNA.backend) fetch(API+'/demandes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).catch(function(){});
+    return r; };
+  var _set=PNA.setStatus;
+  PNA.setStatus=function(ref,status){ _set(ref,status);
+    if(PNA.backend) fetch(API+'/demandes/'+encodeURIComponent(ref),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).catch(function(){}); };
+
+  PNA.sync=pull;
+  pull();
+})();
 </script>
 
 <script id="redesign-neo-js">
