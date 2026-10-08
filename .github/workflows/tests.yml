@@ -1,0 +1,30 @@
+name: Tests du portail
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m unittest discover -s tests -v
+      - run: node --check public/app.js
+      - run: node --check public/qr.js
+      - name: Installer le navigateur de test
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Vérifier le parcours dans le navigateur
+        env:
+          PNA_DB: data/browser-test.sqlite3
+        run: |
+          python -c "from server import Store; import os; Store(os.environ['PNA_DB']).admin('admin@example.org', 'browser-test-password-123')"
+          python server.py --dev > /tmp/pna-test.log 2>&1 &
+          PNA_PID=$!
+          trap 'kill "$PNA_PID"' EXIT
+          python -c "import time, urllib.request; time.sleep(1); urllib.request.urlopen('http://127.0.0.1:3000/api/config')"
+          node tests/browser.cjs
